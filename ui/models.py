@@ -4,5 +4,7 @@ from django.db import models
 
 class CustomUser(AbstractUser):
     # Add any additional fields here
-    # email = models.EmailField(unique=True)
-    pass
+    USERNAME_FIELD = 'email'
+    email = models.EmailField(unique=True)
+    REQUIRED_FIELDS = []
+    # REQUIRED_FIELDS = ['username']

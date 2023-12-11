@@ -4,10 +4,12 @@
 {% block title %}Register{% endblock %}
 
 {% block content %}
-  <h2>Register</h2>
+  <h3 class="mb-3 text-center">
+    Register
+  </h3>
   <form method="post" action="{% url 'register' %}">
     {% csrf_token %}
     {{ form.as_p }}
-    <button type="submit">Register</button>
+    <button class="btn btn-hover" type="submit">Register</button>
   </form>
 {% endblock %}

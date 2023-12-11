@@ -42,6 +42,7 @@ INSTALLED_APPS = [
 ]
 
 AUTH_USER_MODEL = 'ui.CustomUser'
+LOGIN_REDIRECT_URL = '/'
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

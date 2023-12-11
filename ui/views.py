@@ -4,6 +4,13 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout
 from .forms import CustomUserCreationForm
 
+# barat@mail.com
+# lonew0lf
+
+# admin
+# admin@mail.com
+# admin123
+
 def register_view(request):
     if request.method == 'POST':
         print(request.POST)
@@ -11,7 +18,7 @@ def register_view(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
-            return redirect('home')  # Change 'home' to the name of your home view
+            return redirect('login')
     else:
         form = CustomUserCreationForm()
     return render(request, 'register.html', {'form': form})
