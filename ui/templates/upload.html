@@ -1,0 +1,14 @@
+{% extends 'base.html' %}
+
+{% block title %}Register{% endblock %}
+
+{% block content %}
+  <h3 class="mb-3 text-center">
+    Upload Movie
+  </h3>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button class="btn btn-hover" type="submit">Upload</button>
+  </form>
+{% endblock %}

@@ -12,6 +12,6 @@ urlpatterns = [
             ), name='login'),
             # , login_view
     path('logout/', logout_view, name='logout'),
-    path('', home, name='home')
-    # Add other URLs as needed
+    path('', home, name='home'),
+    path('upload/', upload_video, name='upload'),
 ]

@@ -1,7 +1,7 @@
 # myapp/forms.py
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm, UsernameField
 from django import forms
-from .models import CustomUser
+from .models import CustomUser, Video
 
 # For registration page
 class CustomUserCreationForm(UserCreationForm):
@@ -33,3 +33,8 @@ class CustomUserLoginForm(AuthenticationForm):
         }
     ))
 
+# For upload page
+class VideoForm(forms.ModelForm):
+    class Meta:
+        model = Video
+        fields = ('title', 'video_file')

@@ -7,4 +7,8 @@ class CustomUser(AbstractUser):
     USERNAME_FIELD = 'email'
     email = models.EmailField(unique=True)
     REQUIRED_FIELDS = []
-    # REQUIRED_FIELDS = ['username']
+
+class Video(models.Model):
+    title = models.CharField(max_length=100)
+    video_file = models.FileField(upload_to='encoded/')
+    url = models.CharField(default = '', max_length=100)
