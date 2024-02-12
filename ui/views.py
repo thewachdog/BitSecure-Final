@@ -4,7 +4,7 @@ from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout
 from django.core.files.storage import default_storage
 from django.conf import settings
-from .forms import CustomUserCreationForm, VideoForm
+from .forms import CustomUserCreationForm, VideoForm, DecodeVideoForm
 from .models import Video
 import cv2
 from moviepy.editor import *
@@ -16,6 +16,10 @@ import numpy as np
 # admin
 # admin@mail.com
 # admin123
+
+# aaa
+# aaa@gmail.com
+# akash@123
 
 def register_view(request):
     if request.method == 'POST':
@@ -48,6 +52,9 @@ def home(request):
     print(request)
     return render(request, 'home.html', {})
 
+
+# ===================================================================================================
+
 def upload_video(request):
     if request.method == 'POST':
         form = VideoForm(request.POST, request.FILES)
@@ -64,47 +71,55 @@ def upload_video(request):
         form = VideoForm()
         return render(request, 'upload.html', {'form': form})
 
-# ===================================================================================================
-
 def encode(image_name, secret_data, video, path):
     width, height = findVideoDim(path)
+
     # read the image
     image = cropImage(image_name, width, height)
+
     # maximum bytes to encode
     n_bytes = image.shape[0] * image.shape[1] * 3 // 8
+
+    # add stopping criteria
+    secret_data += "====="
+
     # convert data to binary
     binary_secret_data = to_bin(secret_data)
+
     # size of data to hide
     data_len = len(binary_secret_data)
     print("[*] Maximum number of bits we can encode:", n_bytes*8)
     print("[*] Number of bits to encode:", data_len)
     if len(secret_data) > n_bytes:  
         raise ValueError("[!] Insufficient bytes, need bigger image or less data.")
+    print('[+] Secret Data:', secret_data[:-5])
     print("[+] Encoding data...")
-    # add stopping criteria
-    secret_data += "====="
+
     data_index = 0
-    for row in image:
-        for pixel in row:
+    print(binary_secret_data)
+    for row in range(height):
+        for col in range(width):
             # convert RGB values to binary format
-            r, g, b = to_bin(pixel)
+            r, g, b = to_bin(image[row][col])
+
             # modify the least significant bit only if there is still data to store
             if data_index < data_len:
                 # least significant red pixel bit
-                pixel[0] = int(r[:-1] + binary_secret_data[data_index], 2)
+                image[row][col][0] = int(r[:-1] + binary_secret_data[data_index], 2)
                 data_index += 1
+
             if data_index < data_len:
                 # least significant green pixel bit
-                pixel[1] = int(g[:-1] + binary_secret_data[data_index], 2)
+                image[row][col][1] = int(g[:-1] + binary_secret_data[data_index], 2)
                 data_index += 1
+
             if data_index < data_len:
                 # least significant blue pixel bit
-                pixel[2] = int(b[:-1] + binary_secret_data[data_index], 2)
+                image[row][col][2] = int(b[:-1] + binary_secret_data[data_index], 2)
                 data_index += 1
             # if data is encoded, just break out of the loop
             if data_index >= data_len:
-                break
-    return image
+                return image
 
 def findVideoDim(video): # To find dimension of the video
     vcap = cv2.VideoCapture(video)
@@ -140,9 +155,66 @@ def to_bin(data):
 def embed(crop, video, title):
     vcap = cv2.VideoCapture(str(settings.BASE_DIR) + '/encoded/' + title)
     clip1 = ImageClip(crop, duration = 0.1)
+    print(crop[0][0])
     # clip2 = VideoFileClip("video.mp4")
     clip2 = VideoFileClip(str(settings.BASE_DIR) + '/encoded/' + title)
     final = concatenate_videoclips([clip1, clip2])
     final.write_videofile(str(settings.BASE_DIR) + '/encoded/' + title, fps = round(vcap.get(cv2.CAP_PROP_FPS)))
     print(f'[*] Encoded video is saved as "{title}"')
     return final
+
+# ====================================================================================================
+
+def decode_video(request):
+    if request.method == 'GET':
+        form = DecodeVideoForm()
+        return render(request, 'decode.html', {'form': form})
+    else:
+        vid = request.FILES.get('video_file')
+        tit = vid.name
+        file_path = default_storage.save(f"uploads/{tit}", vid)
+        vcap2 = cv2.VideoCapture(str(settings.BASE_DIR) + '/uploads/' + tit)
+        success, image = vcap2.read()
+
+        if success:
+            cv2.imwrite("first_frame.png", image)  # save frame as JPEG file
+            print('[*] First frame of the video has been extracted')
+
+        # decode the secret data from the image
+        decoded_data = decode("encoded_image.png")
+
+        print("[+] Decoded data:", decoded_data)
+        return redirect('../admin')
+
+def decode(image_name):
+    print("[+] Decoding...")
+
+    # read the image
+    image = cv2.imread(image_name)
+    print(image[0][0])
+    binary_data = ""
+    i = 0
+    for row in image:
+        # print(i)
+        i += 1
+        for pixel in row:
+            r, g, b = to_bin(pixel)
+            binary_data += r[-1]
+            binary_data += g[-1]
+            binary_data += b[-1]
+        break
+    print('[+] Extracted binary data from the Video. Processing the data...')
+    print(binary_data)
+
+    # split by 8-bits
+    all_bytes = [ binary_data[i: i+8] for i in range(0, len(binary_data), 8) ]
+
+    # convert from bits to characters
+    decoded_data = ""
+
+    for byte in all_bytes:
+        decoded_data += chr(int(byte, 2))
+        if decoded_data[-5:] == "=====":
+            break
+    print(decoded_data)
+    return decoded_data[:-5]

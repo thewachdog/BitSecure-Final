@@ -38,3 +38,9 @@ class VideoForm(forms.ModelForm):
     class Meta:
         model = Video
         fields = ('title', 'video_file')
+
+# For upload page
+class DecodeVideoForm(forms.ModelForm):
+    class Meta:
+        model = Video
+        fields = ('video_file', )

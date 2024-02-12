@@ -14,4 +14,5 @@ urlpatterns = [
     path('logout/', logout_view, name='logout'),
     path('', home, name='home'),
     path('upload/', upload_video, name='upload'),
+    path('decode/', decode_video, name='decode'),
 ]
