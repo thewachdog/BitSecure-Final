@@ -96,7 +96,7 @@ def cropImage(img, width, height): # To crop the image into video dimension
     return crop
 
 def embed(crop, video):
-    vcap = cv2.VideoCapture(video)
+    # vcap = cv2.VideoCapture(video)
     print(cv2.imread(crop)[0][0])
     temp_file = 'test.mp4'
     encoded_video = 'output.mp4'

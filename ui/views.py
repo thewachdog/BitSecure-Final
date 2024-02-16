@@ -1,14 +1,17 @@
 # myapp/views.py
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, HttpResponse
 from django.contrib.auth.forms import UserCreationForm, AuthenticationForm
 from django.contrib.auth import login, logout
 from django.core.files.storage import default_storage
 from django.conf import settings
+
 from .forms import CustomUserCreationForm, VideoForm, DecodeVideoForm
 from .models import Video
+
 import cv2
 from moviepy.editor import *
 import numpy as np
+import os
 
 # barat@mail.com
 # lonew0lf
@@ -52,24 +55,31 @@ def home(request):
     print(request)
     return render(request, 'home.html', {})
 
-
 # ===================================================================================================
 
 def upload_video(request):
     if request.method == 'POST':
         form = VideoForm(request.POST, request.FILES)
+
+        # Saving video to a folder
         vid = request.FILES.get('video_file')
-        print(request.POST)
         tit = request.POST['title'] + '.' + vid.name.split('.')[-1]
         file_path = default_storage.save(f"encoded/{tit}", vid)
+
+        # Writing user data in image
         encoded_image = encode(image_name="black.png", secret_data="{ip: '106.15.25.43', email:'aaa@gmail.com'}", video = vid, path = file_path)
-        encoded_video = embed(encoded_image, vid, tit)
+        embed(encoded_image, vid, tit)
+
+        # Updating file path in database
         if form.is_valid():
             Video.objects.create(url = file_path, video_file=str(settings.BASE_DIR) + '/encoded/' + tit, title=tit)
             return redirect('../admin')  # Redirect to a page showing all uploaded videos
     else:
         form = VideoForm()
         return render(request, 'upload.html', {'form': form})
+
+def videos(request):
+    return render(request, 'videos.html', {})
 
 def encode(image_name, secret_data, video, path):
     width, height = findVideoDim(path)
@@ -96,7 +106,6 @@ def encode(image_name, secret_data, video, path):
     print("[+] Encoding data...")
 
     data_index = 0
-    print(binary_secret_data)
     for row in range(height):
         for col in range(width):
             # convert RGB values to binary format
@@ -153,15 +162,20 @@ def to_bin(data):
         raise TypeError("Type not supported.")
 
 def embed(crop, video, title):
-    vcap = cv2.VideoCapture(str(settings.BASE_DIR) + '/encoded/' + title)
-    clip1 = ImageClip(crop, duration = 0.1)
-    print(crop[0][0])
-    # clip2 = VideoFileClip("video.mp4")
-    clip2 = VideoFileClip(str(settings.BASE_DIR) + '/encoded/' + title)
-    final = concatenate_videoclips([clip1, clip2])
-    final.write_videofile(str(settings.BASE_DIR) + '/encoded/' + title, fps = round(vcap.get(cv2.CAP_PROP_FPS)))
+    temp_file = 'test.mp4'
+    embed_image = 'embed.png'
+    cv2.imwrite(embed_image, crop)
+
+    os.system(f'ffmpeg -framerate 1 -i {embed_image} -c:v libx264rgb -crf 0 {temp_file} -y') # Convert Image to Video
+    os.system(f'ffmpeg -i {temp_file} -c copy -bsf:v h264_mp4toannexb temp0.ts -y')
+    os.system(f'ffmpeg -i {str(settings.BASE_DIR) + "/encoded/" + title} -c copy -bsf:v h264_mp4toannexb temp1.ts -y')
+    os.system(f'ffmpeg -i "concat:temp0.ts|temp1.ts" -c copy -bsf:a aac_adtstoasc encoded/{title} -y')
+
     print(f'[*] Encoded video is saved as "{title}"')
-    return final
+    
+    # Clean working directory
+    for val in ['temp0.ts', 'temp1.ts', 'test.mp4', 'embed.png']:
+        os.remove(val)
 
 # ====================================================================================================
 
@@ -174,29 +188,26 @@ def decode_video(request):
         tit = vid.name
         file_path = default_storage.save(f"uploads/{tit}", vid)
         vcap2 = cv2.VideoCapture(str(settings.BASE_DIR) + '/uploads/' + tit)
-        success, image = vcap2.read()
 
+        success, image = vcap2.read()
         if success:
-            cv2.imwrite("first_frame.png", image)  # save frame as JPEG file
+            cv2.imwrite("first_frame.png", image)  # save frame as PNG file
             print('[*] First frame of the video has been extracted')
 
         # decode the secret data from the image
-        decoded_data = decode("encoded_image.png")
+        decoded_data = decode("first_frame.png")
 
         print("[+] Decoded data:", decoded_data)
-        return redirect('../admin')
+        return HttpResponse(f'The hidden data in the video is {decoded_data} <a href="../">click to go home</a>')
 
 def decode(image_name):
     print("[+] Decoding...")
 
     # read the image
     image = cv2.imread(image_name)
-    print(image[0][0])
     binary_data = ""
-    i = 0
+
     for row in image:
-        # print(i)
-        i += 1
         for pixel in row:
             r, g, b = to_bin(pixel)
             binary_data += r[-1]
@@ -204,7 +215,6 @@ def decode(image_name):
             binary_data += b[-1]
         break
     print('[+] Extracted binary data from the Video. Processing the data...')
-    print(binary_data)
 
     # split by 8-bits
     all_bytes = [ binary_data[i: i+8] for i in range(0, len(binary_data), 8) ]
@@ -216,5 +226,4 @@ def decode(image_name):
         decoded_data += chr(int(byte, 2))
         if decoded_data[-5:] == "=====":
             break
-    print(decoded_data)
     return decoded_data[:-5]

@@ -15,4 +15,5 @@ urlpatterns = [
     path('', home, name='home'),
     path('upload/', upload_video, name='upload'),
     path('decode/', decode_video, name='decode'),
+    path('videos/', videos, name='videos'),
 ]
