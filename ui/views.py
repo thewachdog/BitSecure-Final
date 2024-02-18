@@ -79,7 +79,12 @@ def upload_video(request):
         return render(request, 'upload.html', {'form': form})
 
 def videos(request):
-    return render(request, 'videos.html', {})
+    print(Video.objects.all())
+    return render(request, 'videos.html', {'vid': Video.objects.all()})
+
+def player(request, vidName):
+    vid = Video.objects.filter(title=vidName).first()
+    return render(request, 'player.html', {'vid': vid})
 
 def encode(image_name, secret_data, video, path):
     width, height = findVideoDim(path)
