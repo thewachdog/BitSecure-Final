@@ -64,16 +64,18 @@ def upload_video(request):
         # Saving video to a folder
         vid = request.FILES.get('video_file')
         tit = request.POST['title'] + '.' + vid.name.split('.')[-1]
-        file_path = default_storage.save(f"encoded/{tit}", vid)
+        file_path = default_storage.save(f"{settings.MEDIA_ROOT}/{tit}", vid)
+        file_path = settings.MEDIA_URL + file_path
+        print(file_path, f"{settings.MEDIA_ROOT}/{tit}")
 
         # Writing user data in image
-        encoded_image = encode(image_name="black.png", secret_data="{ip: '106.15.25.43', email:'aaa@gmail.com'}", video = vid, path = file_path)
+        encoded_image = encode(image_name="black.png", secret_data="{ip: '106.15.25.43', email:'aaa@gmail.com'}", video = vid, path = file_path[1:])
         embed(encoded_image, vid, tit)
 
         # Updating file path in database
         if form.is_valid():
-            Video.objects.create(url = file_path, video_file=str(settings.BASE_DIR) + '/encoded/' + tit, title=tit)
-            return redirect('../admin')  # Redirect to a page showing all uploaded videos
+            Video.objects.create(url = file_path[1:], video_file=str(settings.MEDIA_ROOT) + '\\' + tit, title=tit)
+            return redirect('..')  # Redirect to a page showing all uploaded videos
     else:
         form = VideoForm()
         return render(request, 'upload.html', {'form': form})
@@ -170,17 +172,19 @@ def embed(crop, video, title):
     temp_file = 'test.mp4'
     embed_image = 'embed.png'
     cv2.imwrite(embed_image, crop)
+    print(str(settings.MEDIA_URL) + title)
 
-    os.system(f'ffmpeg -framerate 1 -i {embed_image} -c:v libx264rgb -crf 0 {temp_file} -y') # Convert Image to Video
+    os.system(f'ffmpeg -framerate 1 -i {embed_image} -t 0.1 -c:v libx264rgb -crf 0 {temp_file} -y') # Convert Image to Video
     os.system(f'ffmpeg -i {temp_file} -c copy -bsf:v h264_mp4toannexb temp0.ts -y')
-    os.system(f'ffmpeg -i {str(settings.BASE_DIR) + "/encoded/" + title} -c copy -bsf:v h264_mp4toannexb temp1.ts -y')
-    os.system(f'ffmpeg -i "concat:temp0.ts|temp1.ts" -c copy -bsf:a aac_adtstoasc encoded/{title} -y')
+    os.system(f'ffmpeg -i {str(settings.MEDIA_URL)[1:] + title} -c copy -bsf:v h264_mp4toannexb temp1.ts -y')
+    os.system(f'ffmpeg -i "concat:temp0.ts|temp1.ts" -f mp4 -c copy -bsf:a aac_adtstoasc {str(settings.MEDIA_URL)[1:]}/{title} -y')
 
     print(f'[*] Encoded video is saved as "{title}"')
     
     # Clean working directory
     for val in ['temp0.ts', 'temp1.ts', 'test.mp4', 'embed.png']:
-        os.remove(val)
+        if not os.path.exists("demofile.txt"):
+            os.remove(val)
 
 # ====================================================================================================
 
@@ -191,16 +195,22 @@ def decode_video(request):
     else:
         vid = request.FILES.get('video_file')
         tit = vid.name
-        file_path = default_storage.save(f"uploads/{tit}", vid)
-        vcap2 = cv2.VideoCapture(str(settings.BASE_DIR) + '/uploads/' + tit)
+        file_path = default_storage.save(f"{settings.MEDIA_ROOT}/uploads/{tit}", vid)
+        vcap2 = cv2.VideoCapture(str(settings.MEDIA_ROOT) + '/uploads/' + tit)
+        frame_name = "first_frame.png"
 
         success, image = vcap2.read()
         if success:
-            cv2.imwrite("first_frame.png", image)  # save frame as PNG file
+            cv2.imwrite(frame_name, image)  # save frame as PNG file
             print('[*] First frame of the video has been extracted')
+        else:
+            print('[!] Error opening video ! Exiting...')
 
         # decode the secret data from the image
-        decoded_data = decode("first_frame.png")
+        decoded_data = decode(frame_name)
+
+        if not os.path.exists(frame_name):
+            os.remove(frame_name)
 
         print("[+] Decoded data:", decoded_data)
         return HttpResponse(f'The hidden data in the video is {decoded_data} <a href="../">click to go home</a>')
