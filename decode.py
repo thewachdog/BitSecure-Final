@@ -38,12 +38,12 @@ def decode(image_name):
             break
     return decoded_data[:-5]
 
-vcap2 = cv2.VideoCapture('output.mp4')
-success, image = vcap2.read()
+# vcap2 = cv2.VideoCapture('output.mp4')
+# success, image = vcap2.read()
 frame_name = "first_frame.png"
-if success:
-    cv2.imwrite(frame_name, image)  # save frame as JPEG file
-    print('[*] First frame of the video has been extracted')
+# if success:
+#     cv2.imwrite(frame_name, image)  # save frame as JPEG file
+#     print('[*] First frame of the video has been extracted')
 
 # decode the secret data from the image
 decoded_data = decode(frame_name)

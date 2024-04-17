@@ -4,15 +4,12 @@
 {% block title %}{{ vid.title }}{% endblock %}
 
 {% block content %}
+{% load common %}
     <h3 class="mb-3 text-center">
-        {{ vid.title }}
+        {{ vid.title|split_dot_first }}
     </h3>
     <video controls>
         <source src="/encoded/{{ vid.title }}" type="video/mp4">
         Your browser does not support this
     </video>
-    <a href="/encoded/{{ vid.title }}">
-        hellow
-    </a>
-  
 {% endblock %}

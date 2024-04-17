@@ -13,16 +13,9 @@ from moviepy.editor import *
 import numpy as np
 import os
 
-# barat@mail.com
-# lonew0lf
-
 # admin
 # admin@mail.com
 # admin123
-
-# aaa
-# aaa@gmail.com
-# akash@123
 
 def register_view(request):
     if request.method == 'POST':
@@ -174,13 +167,13 @@ def embed(crop, video, title):
     cv2.imwrite(embed_image, crop)
     print(str(settings.MEDIA_URL) + title)
 
-    os.system(f'ffmpeg -framerate 1 -i {embed_image} -t 0.1 -c:v libx264rgb -crf 0 {temp_file} -y') # Convert Image to Video
-    os.system(f'ffmpeg -i {temp_file} -c copy -bsf:v h264_mp4toannexb temp0.ts -y')
+    os.system(f'ffmpeg -i {embed_image} -t 0.1 -f mp4 -c:v libx264rgb -crf 0 {temp_file} -y') # Convert Image to Video
+    os.system(f'ffmpeg -i {temp_file} -t 0.1 -c copy -bsf:v h264_mp4toannexb temp0.ts -y')
     os.system(f'ffmpeg -i {str(settings.MEDIA_URL)[1:] + title} -c copy -bsf:v h264_mp4toannexb temp1.ts -y')
     os.system(f'ffmpeg -i "concat:temp0.ts|temp1.ts" -f mp4 -c copy -bsf:a aac_adtstoasc {str(settings.MEDIA_URL)[1:]}/{title} -y')
 
     print(f'[*] Encoded video is saved as "{title}"')
-    
+
     # Clean working directory
     for val in ['temp0.ts', 'temp1.ts', 'test.mp4', 'embed.png']:
         if not os.path.exists("demofile.txt"):
